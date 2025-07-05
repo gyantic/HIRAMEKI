@@ -1,8 +1,23 @@
 import gym
 import numpy as np
+import sys
+import pathlib
+
+# maniskill_fetch_projectのパスを追加
+sys.path.append(str(pathlib.Path(__file__).parent.parent.parent / "maniskill_fetch_project"))
+
 from mani_skill2.envs.sapien_env import BaseEnv
 from mani_skill2.utils.common import flatten_state_dict
 from mani_skill2.utils.visualization.misc import tile_images
+
+# カスタム環境をインポート
+try:
+    from environments.fetch_pick_env import FetchPickEnv
+    from environments.fetch_env import make_fetch_env as make_fetch_env_custom
+    CUSTOM_ENV_AVAILABLE = True
+except ImportError:
+    CUSTOM_ENV_AVAILABLE = False
+    print("Warning: Custom maniskill environments not available")
 
 
 class ManiskillWrapper:
@@ -211,4 +226,9 @@ def make_maniskill_env(env_name, action_repeat=1, size=(64, 64), camera_name="ba
     Returns:
         ManiskillWrapper: ラップされた環境
     """
+    # カスタム環境の場合は特別な処理
+    if env_name == "FetchPick-v1" and CUSTOM_ENV_AVAILABLE:
+        return make_fetch_env_custom(FetchPickEnv, action_repeat, size, camera_name, seed)
+
+    # 標準のManiskill環境
     return ManiskillWrapper(env_name, action_repeat, size, camera_name, seed)

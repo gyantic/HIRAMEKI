@@ -178,9 +178,19 @@ class FetchEnvWrapper:
 
         # action_repeat回だけ行動を実行
         for _ in range(self._action_repeat):
-            obs, r, d, truncated, i = self._env.step(action)
+            step_result = self._env.step(action)
+
+            # Maniskill環境の戻り値形式に応じて処理
+            if len(step_result) == 5:  # (obs, reward, terminated, truncated, info)
+                obs, r, d, truncated, i = step_result
+                done = done or d or truncated
+            elif len(step_result) == 4:  # (obs, reward, done, info)
+                obs, r, d, i = step_result
+                done = done or d
+            else:
+                raise ValueError(f"Unexpected step result format: {len(step_result)} values")
+
             reward += r
-            done = done or d or truncated
             info.update(i)
             if done:
                 break

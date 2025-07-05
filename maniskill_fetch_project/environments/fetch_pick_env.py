@@ -40,16 +40,16 @@ class FetchPickEnv(FetchBaseEnv):
 
     def _create_table(self):
         """テーブルを作成"""
-        from mani_skill2.utils.registration import REGISTERED_ENVS
-
         # テーブルのアセットを読み込み
-        table_asset = self.scene.create_actor_builder().build_static("table")
+        builder = self.scene.create_actor_builder()
+        builder.add_box_collision(half_size=[0.5, 0.5, 0.02])
+        builder.add_box_visual(half_size=[0.5, 0.5, 0.02], color=[0.8, 0.8, 0.8])
+
+        self.table = builder.build_static("table")
 
         # テーブルの位置を設定
         table_pose = [0, 0, 0]  # 原点に配置
-        table_asset.set_pose(table_pose)
-
-        self.table = table_asset
+        self.table.set_pose(table_pose)
 
     def _create_object(self):
         """ピッキング対象のオブジェクトを作成"""
@@ -68,7 +68,8 @@ class FetchPickEnv(FetchBaseEnv):
         """カメラを設定"""
         # カメラの位置と向きを設定
         camera_pose = [0, -1.5, 1.5]  # ロボットの前方上方
-        self.scene.add_camera("base_camera", camera_pose, [0, 0, 0])
+        camera_target = [0, 0, 0]  # カメラが向く方向
+        self.scene.add_camera("base_camera", camera_pose, camera_target)
 
     def _compute_reward(self):
         """報酬を計算"""
@@ -129,3 +130,20 @@ class FetchPickEnv(FetchBaseEnv):
 
         object_pose = [x, y, z]
         self.object.set_pose(object_pose)
+
+    def get_obs(self):
+        """観測を取得"""
+        obs = super().get_obs()
+
+        # 画像観測を追加
+        if hasattr(self, 'scene') and hasattr(self.scene, 'cameras'):
+            images = self.render()
+            if isinstance(images, dict) and "base_camera" in images:
+                obs["image"] = images["base_camera"]
+            elif isinstance(images, np.ndarray):
+                obs["image"] = images
+            else:
+                # デフォルトの画像を作成
+                obs["image"] = np.zeros((64, 64, 3), dtype=np.uint8)
+
+        return obs
